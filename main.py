@@ -5823,7 +5823,7 @@ def box_plotting_paired():
     plt.show()
 
 if __name__ == '__main__':
-    print("Cholinergic Activity test2")
+    print("Cholinergic Activity")
     # box_plotting_paired()
     # plot_speed_dfof()
     # find_best_smoothing_corr()

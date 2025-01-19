@@ -5827,7 +5827,7 @@ if __name__ == '__main__':
     # box_plotting_paired()
     # plot_speed_dfof()
     # find_best_smoothing_corr()
-    novel_env()
+    # novel_env()
     # GLM_func()
     # behavioral_interactions()
     # washout_win()

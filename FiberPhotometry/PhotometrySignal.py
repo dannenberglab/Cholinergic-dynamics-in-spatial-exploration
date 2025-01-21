@@ -14,7 +14,187 @@ from scipy import stats
 from matplotlib.ticker import MultipleLocator
 from scipy.optimize import curve_fit
 from matplotlib.patches import Polygon
-##################### Old Version
+
+def corr_speed_dfof(dfof,smooth_time_window,input_speed,sr_analysis):
+    ## find min as offset for log
+
+    if smooth_time_window==0:
+        smooth_speed = input_speed
+        smoothed_dfof = dfof
+        print("wrong smooth window size")
+    else:
+        smooth_speed=input_speed
+        smoothed_dfof=smooth_signal(dfof, smooth_time_window,sr_analysis)
+
+    ####### corr log
+    # Compute Pearson's R
+    Rlog, _ = pearsonr(smooth_speed, smoothed_dfof)
+
+    return Rlog
+
+def show_speed_dfof_decays(time_vec, signals, sems, smooth_time_window, sr_analysis):
+
+    dfof=signals[0]
+    corrected_dfof=signals[1]
+    predicted_dfof=signals[2]
+    input_speed=signals[3]
+
+    dfof_sem=sems[0]
+    corrected_dfof_sem=sems[1]
+    predicted_dfof_sem=sems[2]
+    speed_sem=sems[3]
+
+    # smoothing signals
+    window_samples = int(smooth_time_window * sr_analysis)  # number of samples in the 1s window
+    kernel = np.ones(window_samples) / window_samples
+
+    smooth_speed = np.convolve(input_speed, kernel, mode='same')
+    speed_sem = np.convolve(speed_sem, kernel, mode='same')
+    fitted_speed, tau_speed = fit_exp(input_speed, sr_analysis)
+
+    smoothed_dfof = np.convolve(dfof, kernel, mode='same')
+    dfof_sem = np.convolve(dfof_sem, kernel, mode='same')
+    fitted_dfof, tau_dfof = fit_exp(dfof, sr_analysis)
+
+    smoothed_corrected_dfof = np.convolve(corrected_dfof, kernel, mode='same')
+    corrected_dfof_sem = np.convolve(corrected_dfof_sem, kernel, mode='same')
+    fitted_corrected_dfof, tau_corrected_dfof = fit_exp(corrected_dfof, sr_analysis)
+
+    smoothed_predicted_dfof = np.convolve(predicted_dfof, kernel, mode='same')
+    predicted_dfof_sem = np.convolve(predicted_dfof_sem, kernel, mode='same')
+    fitted_predicted_dfof, tau_predicted_dfof = fit_exp(predicted_dfof, sr_analysis)
+
+
+    f1, (s1, s2, s3) = plt.subplots(3, 1, figsize=(8, 10))
+
+    # s1.plot(time_vec, input_speed, linewidth=1, color='k')
+    s1.fill_between(time_vec, smooth_speed - speed_sem, smooth_speed + speed_sem, color='lightgray')
+    s1.plot(time_vec, smooth_speed, linewidth=1, color='#666869')
+    s1.plot(time_vec, fitted_speed, color='#666869', linewidth=3)
+    s1.set_title(f'{smooth_time_window}-sec smoothed speed')
+    s1.set_ylabel('(speed) (cm/s)')
+    s1.set_xticklabels([])
+    s1.text(350, 4, f'avg(speed) τ = {tau_speed:.2f}' + " (s)", fontsize=12, color='black')
+    s1.tick_params(direction='out')
+
+    s2.fill_between(time_vec, smoothed_dfof - dfof_sem, smoothed_dfof + dfof_sem, color='#C4E5D8')
+    s2.plot(time_vec, smoothed_dfof, linewidth=1 ,color='#109D49')
+    s2.plot(time_vec,fitted_dfof, color='green', linewidth=3)
+    s2.text(350, 2, f'avg(zscore dfof) τ = {tau_dfof:.2f}' + " (s)", fontsize=12, color='green')
+
+    s2.fill_between(time_vec, smoothed_predicted_dfof - predicted_dfof_sem,
+                    smoothed_predicted_dfof + predicted_dfof_sem, color='#8F9194')
+    s2.plot(time_vec, smoothed_predicted_dfof, linewidth=1, color='#515254')
+    s2.plot(time_vec, fitted_predicted_dfof, color='black', linewidth=3)
+    s2.text(350, 1.2, f'predict(logspeed) τ = {tau_predicted_dfof:.2f}' + " (s)", fontsize=12, color='black')
+
+    s2.set_title(f'{smooth_time_window}-sec smoothed cholinergic activity')
+    s2.set_ylabel(r'$\Delta$'+'F/F')
+    s2.set_xticklabels([])
+    s2.tick_params(direction='out')
+
+    s3.fill_between(time_vec, smoothed_corrected_dfof - corrected_dfof_sem,
+                    smoothed_corrected_dfof + corrected_dfof_sem, color='#DBECCB')
+    s3.plot(time_vec, smoothed_corrected_dfof, linewidth=1, color='#90CB81')
+    s3.plot(time_vec, fitted_corrected_dfof, linewidth=3, color='#6ABD45')
+    s3.text(350, 2, f'avg(zscoredfof-(a*logspeed+b)) τ = {tau_corrected_dfof:.2f}' + " (s)", fontsize=12, color='#6ABD45')
+    s3.set_title('Superimposition')
+    s3.set_xlabel('Time (s)')
+    s3.set_ylabel('Z-score')
+    s3.tick_params(direction='out')
+
+    # Link x-axes of the subplots
+    plt.subplots_adjust(hspace=0.5)
+
+    return 0
+def show_speed_dfof_decays_seperate(time_vec, signals, sems, smooth_time_window, sr_analysis,path):
+
+    dfof=signals[0]
+    corrected_dfof=signals[1]
+    predicted_dfof=signals[2]
+    input_speed=signals[3]
+
+    dfof_sem=sems[0]
+    corrected_dfof_sem=sems[1]
+    predicted_dfof_sem=sems[2]
+    speed_sem=sems[3]
+
+    # smoothing signals
+    window_samples = int(smooth_time_window * sr_analysis)  # number of samples in the 1s window
+    kernel = np.ones(window_samples) / window_samples
+
+    smooth_speed = np.convolve(input_speed, kernel, mode='same')
+    speed_sem = np.convolve(speed_sem, kernel, mode='same')
+    fitted_speed, tau_speed = fit_exp(input_speed, sr_analysis)
+
+    smoothed_dfof = np.convolve(dfof, kernel, mode='same')
+    dfof_sem = np.convolve(dfof_sem, kernel, mode='same')
+    fitted_dfof, tau_dfof = fit_exp(dfof, sr_analysis)
+
+    smoothed_corrected_dfof = np.convolve(corrected_dfof, kernel, mode='same')
+    corrected_dfof_sem = np.convolve(corrected_dfof_sem, kernel, mode='same')
+    fitted_corrected_dfof, tau_corrected_dfof = fit_exp(corrected_dfof, sr_analysis)
+
+    smoothed_predicted_dfof = np.convolve(predicted_dfof, kernel, mode='same')
+    predicted_dfof_sem = np.convolve(predicted_dfof_sem, kernel, mode='same')
+    fitted_predicted_dfof, tau_predicted_dfof = fit_exp(predicted_dfof, sr_analysis)
+
+    # Plotting the first subplot separately
+    f1 = plt.figure(figsize=(8, 4))
+    plt.fill_between(time_vec, smooth_speed - speed_sem, smooth_speed + speed_sem, color='lightgray')
+    plt.plot(time_vec, smooth_speed, linewidth=1, color='#666869')
+    plt.plot(time_vec, fitted_speed, color='#666869', linewidth=3)
+    plt.title(f'{smooth_time_window}-sec smoothed speed')
+    plt.ylabel('(speed) (cm/s)')
+    plt.text(350, 4, f'avg(speed) τ = {tau_speed:.2f}' + " (s)", fontsize=12, color='black')
+    plt.tick_params(direction='out')
+    plt.savefig(path + "decays1_avg.svg", format="svg")
+    plt.show()
+
+    # Plotting the second subplot separately
+    f2 = plt.figure(figsize=(8, 4))
+    plt.fill_between(time_vec, smoothed_dfof - dfof_sem, smoothed_dfof + dfof_sem, color='#C4E5D8')
+    plt.plot(time_vec, smoothed_dfof, linewidth=1, color='#109D49')
+    plt.plot(time_vec, fitted_dfof, color='green', linewidth=3)
+    plt.text(350, 2, f'avg(zscore dfof) τ = {tau_dfof:.2f}' + " (s)", fontsize=12, color='green')
+
+    plt.fill_between(time_vec, smoothed_predicted_dfof - predicted_dfof_sem,
+                     smoothed_predicted_dfof + predicted_dfof_sem, color='#8F9194')
+    plt.plot(time_vec, smoothed_predicted_dfof, linewidth=1, color='#515254')
+    plt.plot(time_vec, fitted_predicted_dfof, color='black', linewidth=3)
+    plt.text(350, 1.2, f'predict(logspeed) τ = {tau_predicted_dfof:.2f}' + " (s)", fontsize=12, color='black')
+
+    plt.title(f'{smooth_time_window}-sec smoothed cholinergic activity')
+    plt.ylabel(r'$\Delta$' + 'F/F')
+    plt.tick_params(direction='out')
+    plt.savefig(path + "decays2_avg.svg", format="svg")
+    plt.show()
+
+    # Plotting the third subplot separately
+    f3 = plt.figure(figsize=(8, 4))
+    plt.fill_between(time_vec, smoothed_corrected_dfof - corrected_dfof_sem,
+                     smoothed_corrected_dfof + corrected_dfof_sem, color='#DBECCB')
+    plt.plot(time_vec, smoothed_corrected_dfof, linewidth=1, color='#90CB81')
+    plt.plot(time_vec, fitted_corrected_dfof, linewidth=3, color='#6ABD45')
+    plt.text(350, 2, f'avg(zscoredfof-(a*logspeed+b)) τ = {tau_corrected_dfof:.2f}' + " (s)", fontsize=12,
+             color='#6ABD45')
+
+    plt.title('Superimposition')
+    plt.xlabel('Time (s)')
+    plt.ylabel('Z-score')
+    plt.tick_params(direction='out')
+    plt.savefig(path + "decays3_avg.svg", format="svg")
+    plt.show()
+
+
+
+
+
+
+
+
+
+
 def calculate_dftof_oldversion(filepath, sr_analysis):
     # calculate df to f
     # Parameters
@@ -900,88 +1080,6 @@ def show_speed_dfof_decays(time_vec, signals, sems, smooth_time_window, sr_analy
     # plt.title("tau for zscore (dfof/speed) - not smoothed ")
     return 0
 
-def show_speed_dfof_decays_seperate(time_vec, signals, sems, smooth_time_window, sr_analysis,path):
-
-    dfof=signals[0]
-    corrected_dfof=signals[1]
-    predicted_dfof=signals[2]
-    input_speed=signals[3]
-
-    dfof_sem=sems[0]
-    corrected_dfof_sem=sems[1]
-    predicted_dfof_sem=sems[2]
-    speed_sem=sems[3]
-
-    # smoothing signals
-    window_samples = int(smooth_time_window * sr_analysis)  # number of samples in the 1s window
-    kernel = np.ones(window_samples) / window_samples
-
-    smooth_speed = np.convolve(input_speed, kernel, mode='same')
-    speed_sem = np.convolve(speed_sem, kernel, mode='same')
-    fitted_speed, tau_speed = fit_exp(input_speed, sr_analysis)
-
-    smoothed_dfof = np.convolve(dfof, kernel, mode='same')
-    dfof_sem = np.convolve(dfof_sem, kernel, mode='same')
-    fitted_dfof, tau_dfof = fit_exp(dfof, sr_analysis)
-
-    smoothed_corrected_dfof = np.convolve(corrected_dfof, kernel, mode='same')
-    corrected_dfof_sem = np.convolve(corrected_dfof_sem, kernel, mode='same')
-    fitted_corrected_dfof, tau_corrected_dfof = fit_exp(corrected_dfof, sr_analysis)
-
-    smoothed_predicted_dfof = np.convolve(predicted_dfof, kernel, mode='same')
-    predicted_dfof_sem = np.convolve(predicted_dfof_sem, kernel, mode='same')
-    fitted_predicted_dfof, tau_predicted_dfof = fit_exp(predicted_dfof, sr_analysis)
-
-    # Plotting the first subplot separately
-    f1 = plt.figure(figsize=(8, 4))
-    plt.fill_between(time_vec, smooth_speed - speed_sem, smooth_speed + speed_sem, color='lightgray')
-    # plt.plot(time_vec, smooth_speed, linewidth=1, color='#666869')
-    # plt.plot(time_vec, fitted_speed, color='#666869', linewidth=3)
-    # plt.title(f'{smooth_time_window}-sec smoothed speed')
-    # plt.ylabel('(speed) (cm/s)')
-    # plt.text(350, 4, f'avg(speed) τ = {tau_speed:.2f}' + " (s)", fontsize=12, color='black')
-    # plt.tick_params(direction='out')
-    # plt.tight_layout()
-    plt.savefig(path + "decays1_avg.svg", format="svg")
-    plt.show()
-
-    # Plotting the second subplot separately
-    f2 = plt.figure(figsize=(8, 4))
-    plt.fill_between(time_vec, smoothed_dfof - dfof_sem, smoothed_dfof + dfof_sem, color='#C4E5D8')
-    # plt.plot(time_vec, smoothed_dfof, linewidth=1, color='#109D49')
-    # plt.plot(time_vec, fitted_dfof, color='green', linewidth=3)
-    # plt.text(350, 2, f'avg(zscore dfof) τ = {tau_dfof:.2f}' + " (s)", fontsize=12, color='green')
-
-    plt.fill_between(time_vec, smoothed_predicted_dfof - predicted_dfof_sem,
-                     smoothed_predicted_dfof + predicted_dfof_sem, color='#8F9194')
-    # plt.plot(time_vec, smoothed_predicted_dfof, linewidth=1, color='#515254')
-    # plt.plot(time_vec, fitted_predicted_dfof, color='black', linewidth=3)
-    # plt.text(350, 1.2, f'predict(logspeed) τ = {tau_predicted_dfof:.2f}' + " (s)", fontsize=12, color='black')
-    #
-    # plt.title(f'{smooth_time_window}-sec smoothed cholinergic activity')
-    # plt.ylabel(r'$\Delta$' + 'F/F')
-    # plt.tick_params(direction='out')
-    # plt.tight_layout()
-    plt.savefig(path + "decays2_avg.svg", format="svg")
-    plt.show()
-
-    # Plotting the third subplot separately
-    f3 = plt.figure(figsize=(8, 4))
-    plt.fill_between(time_vec, smoothed_corrected_dfof - corrected_dfof_sem,
-                     smoothed_corrected_dfof + corrected_dfof_sem, color='#DBECCB')
-    # plt.plot(time_vec, smoothed_corrected_dfof, linewidth=1, color='#90CB81')
-    # plt.plot(time_vec, fitted_corrected_dfof, linewidth=3, color='#6ABD45')
-    # plt.text(350, 2, f'avg(zscoredfof-(a*logspeed+b)) τ = {tau_corrected_dfof:.2f}' + " (s)", fontsize=12,
-    #          color='#6ABD45')
-
-    # plt.title('Superimposition')
-    # plt.xlabel('Time (s)')
-    # plt.ylabel('Z-score')
-    plt.tick_params(direction='out')
-    plt.tight_layout()
-    plt.savefig(path + "decays3_avg.svg", format="svg")
-    plt.show()
-
 
 def show_speed_dfof_decays_temp(time_vec, signals, sems, smooth_time_window, sr_analysis):
 
@@ -994,9 +1092,6 @@ def show_speed_dfof_decays_temp(time_vec, signals, sems, smooth_time_window, sr_
     corrected_dfof_sem=sems[1]
     predicted_dfof_sem=sems[2]
     speed_sem=sems[3]
-
-
-
 
     smooth_speed = smooth_signal(input_speed, smooth_time_window, sr_analysis)
     speed_sem = smooth_signal(speed_sem, smooth_time_window, sr_analysis)
@@ -1030,26 +1125,7 @@ def show_speed_dfof_decays_temp(time_vec, signals, sems, smooth_time_window, sr_
     plt.xlabel('Time (s)')
     plt.ylabel('Z-score')
     plt.tick_params(direction='out')
-
-
     return 0
-def corr_speed_dfof(dfof,smooth_time_window,input_speed,sr_analysis):
-    ## find min as offset for log
-
-    if smooth_time_window==0:
-        smooth_speed = input_speed
-        smoothed_dfof = dfof
-        print("wrong smooth window size")
-    else:
-        smooth_speed=input_speed
-        smoothed_dfof=smooth_signal(dfof, smooth_time_window,sr_analysis)
-
-    ####### corr log
-    # Compute Pearson's R
-    Rlog, _ = pearsonr(smooth_speed, smoothed_dfof)
-
-    return Rlog
-
 
 
 def corr_speed_dfof_band(time_vec, dfof, input_speed, smooth_time_window_big, smooth_time_window_s,  sr_analysis):

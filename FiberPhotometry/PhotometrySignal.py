@@ -425,55 +425,6 @@ def show_speed_dfof_decays_signle(time_vec, signals, smooth_time_window, sr_anal
 
     return tau_speed,tau_dfof,tau_corrected_dfof,tau_predicted_dfof
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-#### multiply vector with a float number
-def multiply_vector(vector, factor):
-    result = []
-    for cell in vector:
-        result.append((cell) * factor)
-    return result
-##########
-
-
 def show_speed_dfof_decays_seperate(time_vec, signals, sems, smooth_time_window, sr_analysis,path):
 
     dfof=signals[0]

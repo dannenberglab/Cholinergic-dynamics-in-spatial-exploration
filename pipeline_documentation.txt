@@ -10,13 +10,6 @@ For each recorded session (Sample or Test), a .csv file was generated containing
 In this section, we provide a detailed explanation of the analyses presented in the manuscript.
 Each analysis function requires two key inputs: a directory_path pointing to the all_data folder, and a user-defined path for saving the output files (e.g., plots or CSVs). When a function is executed, it loops through all recorded sessions stored in the all_data directory. For each session, it reads the session metadata from two files: detail.txt, which specifies the timing (in seconds) of when the mouse was placed in the maze, and mouse_id.txt, which contains the mouse ID, trial number (1 or 2), and task type (Sample = 0, Test = 1). It then loads the main session data, including ΔF/F signals, movement speed, and behavioral labels, from a corresponding CSV file. This structure allows each function to process all available sessions in a standardized, automated way.
 •	The function plot_speed_dfof includes three optional parts that can be uncommented depending on the desired analysis. First, you can generate Figures 2A and 2D, which show the correlation between movement speed and cholinergic activity. To use the logarithm of movement speed in this plot, set the input variable log = 1. Second, the function scatter_plot_dfof_speed visualizes the relationship between ΔF/F and speed for a given session, as shown in Figures 2B and 2E. It optionally smooths both signals and plots every 5th frame, fitting either a logarithmic or linear curve depending on the input. Third, the analysis for Figures 2C and 2F using avg_scatter_plot_dfof_speed function examines how ΔF/F varies with speed on average across sessions. For this, the signals are smoothed, speed is log-transformed, and ΔF/F is binned and averaged. The result is plotted across all sessions and separately for Sample and Test conditions. To assess statistical differences between task types, a linear mixed-effects model is fit with speed, task type, and their interaction as fixed effects, and session ID as a random effect.
-
-
-
-
-
-
-
 •	The find_best_smoothing_corr function evaluates how the correlation between movement speed and cholinergic activity (ΔF/F) varies across different smoothing window sizes shown in Figure 2G. For each recorded session, the function loads speed and ΔF/F signals, applies a range of temporal smoothing windows (from 0.25 to 256 seconds), and computes the Pearson correlation coefficient between the logarithm of speed and smoothed ΔF/F signal using the corr_speed_dfof function. This allows us to identify the optimal smoothing timescale that maximizes the relationship between movement and cholinergic activity. The results are visualized as session-level and averaged across all sessions.
 •	The function novel_env analyzes cholinergic activity dynamics at the start of Sample and Test sessions to assess whether elevated activity reflects environmental changes beyond what can be explained by movement speed. It iterates through all session folders, extracts dF/F and speed signals, applies 1-second smoothing, z-scores the dF/F trace, and fits a linear regression model to predict dF/F from log-transformed speed. Predicted and speed-corrected dF/F signals are averaged across sessions and plotted alongside raw dF/F and speed (Figure 2H–I). Uncommenting the relevant section allows plotting these signals for individual sessions. A nonparametric cluster-based permutation test compares observed and speed-predicted dF/F, reporting the largest cluster mass, its duration, and p-values. The null distribution is saved as a CSV file, and the number of iterations (default 500) can be modified.
 •	The function time_analysis_washout generates data for Figure 3 by quantifying exploration times of stationary and non-stationary objects during Sample and Test sessions. It loops through session folders, extracts object exploration signals from processed CSV files, and segments the data into 3-minute windows starting from the session onset. For each window, it computes the total exploration time for each object and calculate the discrimination index (DI) and stores the results in a DataFrame (wash_time_ratio.csv), where each column represents a session and each row a time window. In addition, the function calculates total exploration times over the full analysis window (first 12 minutes for Sample, first 3 minutes for Test), and computes the normalized difference between them as a DI. These session-level values are saved in summary_time.csv, along with task labels and experiment identifiers. This function supports the analysis shown in Figures 3A–C by enabling time-resolved and total comparisons of object preference behavior across task phases. Remember to change the analysis_win value to 3 minutes for Test sessions and 12 minutes for Sample sessions when generating the summary data.
@@ -27,32 +20,44 @@ Each analysis function requires two key inputs: a directory_path pointing to the
 •	The time_wash_LLM.m script fits a linear mixed-effects model (LMM) across sliding 3-minute windows to examine how cholinergic activity relates to behavioral states over time (Figures 4D–E). Using the combined session dataset (all20sessions_allbehaviors.csv), it loops over overlapping time windows (1-minute step, 3-minute width), filters sessions with at least 1s of both stationary and non-stationary object exploration, and fits a full LMM with fixed effects for task × behaviors and nested random intercepts/slopes for mouse ID, trial (ObLoM) ID, and session ID. Fixed-effect estimates, standard errors, t-statistics, and p-values are extracted from each model, reshaped into wide format, and saved in LMM_windowed.csv. This analysis captures time-resolved behavioral contributions to cholinergic dynamics throughout Sample and Test sessions.
 •	The function bar_plot_timewashedLLM visualizes the time-resolved effects of object exploration on cholinergic activity based on linear mixed-effects models fit across 3-minute sliding windows. It loads precomputed estimates and standard errors of fixed effects from LMM_windowed.csv, then plots coefficients of exploration of non-stationary vs. stationary objects separately for Sample and Test sessions (Figure 4D–E). It also computes and plots the difference between these two conditions across time. To statistically evaluate whether this difference varies by task phase, the function fits an ordinary least squares (OLS) model with task_phase and time_window.
 •	The function strech_time_Behaviors_only_4_statistics performs a detailed event-triggered, time-warped analysis of cholinergic activity (ΔF/F), predicted activity from movement speed, and speed itself, aligned to specific behavioral bouts such as locomotion, grooming, rearing, and object exploration. 
-It takes as inputs including: 
-o	behavior name: “behavior_walking” (considered as locomotion), “behavior_grooming”, “behavior_rearings”, “behavior_exp_statobj”, “behavior_exp_non_statobj”
-o	task phase: “Sample”, “Test”, or “both” 
-o	specific mouse ID: from 1-6 or 0 for including all mice in the analysis
-o	the number of iterations for a nonparametric cluster-based permutation test. 
+Inputs:
+o	name_behavior (str)
+Behavior to analyze: "behavior_walking" (locomotion), "behavior_grooming", "behavior_rearings", "behavior_exp_statobj", or "behavior_exp_non_statobj".
+o	whichTask (str)
+Task phase to include: "Sample", "Test", or "both".
+o	mouseid (int)
+Specific mouse ID to include in the analysis (values from 1 to 6), or 0 to include all mice.
+o	trialid (int)
+ObLoM task: 1, 2, or 0 to include both Object Location Memory (ObLoM) tasks.
+o	num_iters_clusterTest (int)
+Number of iterations for the nonparametric cluster-based permutation test.
 For each session that meets the task and mouse criteria, the function loads the relevant behavioral and cholinergic signals, smooths the ΔF/F and speed traces using a 0.5-second moving average, z-scores the ΔF/F, and fits a linear regression model to predict ΔF/F from log-transformed speed. Using this model, it generates predicted cholinergic activity to later compare against observed activity. 
 The function then detects valid bouts of the selected behavior and aligns the ΔF/F, predicted ΔF/F, and speed signals around those bouts, extracting a window from 5 seconds before the behavior to 5 seconds after its offset. It also removes any short bouts (<2 s) and excluded bouts if the same behavior occurred within 4 s before the onset or after the offset of the bout.
 The middle segment (i.e., the behavior duration) is linearly stretched to a fixed length using interpolation, allowing comparison across bouts of varying durations. Simultaneously, it extracts matching baseline segments from non-overlapping periods for comparison. It also captures time-warped co-occurring behaviors such as locomotion, grooming, rearing, and object exploration, as well as non-behavioral background activity. These signals are aggregated across sessions, and the function computes the average and standard error of the mean (SEM) for each signal during pre-, during-, and post-behavior windows. To visualize the behavioral context, the function generates plots showing the number and percentage of co-occurring behaviors across the aligned timepoints, helping verify whether the analyzed behavior occurred in isolation. It then merges the time-warped signals into single traces for each of ΔF/F, predicted ΔF/F, and speed, and overlays them in a final plot with dual y-axes—one for speed, and one for ΔF/F and predicted ΔF/F—along with vertical lines marking behavior onset and offset. 
 Finally, to statistically compare the observed and predicted ΔF/F signals during behavior, the function applies a cluster-based permutation test across the aligned windows. It computes the t-statistic time series between the two signals, identifies the largest contiguous cluster of significance, and generates a null distribution by randomly permuting the signal labels across events for the specified number of iterations (you can set that using num_iters_clusterTest input). It reports whether the observed cluster is statistically significant, along with its size, mass, and the percentage of the behavior duration showing a significant difference. All plots and permutation test results are saved to the specified output path. This function was used to generate Figure 5 in the manuscript.
-strech_time_Behaviors_only_4_statistics outputs: 
-o	behaviors_percentage_behavior_"name".svg
-A plot showing the proportion of total behaviors by computing the ratio between the occurrence of an individual behavior at a given time and the sum of all behaviors occurring at that time.
-o	main_behavior_"name".svg
-A time-aligned visualization of behavioral events across sessions. It displays movement speed (black), observed cholinergic activity (green), and cholinergic activity predicted from movement speed (red) for a 5-second window before behavior onset, during the behavior, and 5 seconds after behavior offset.
-o	main_signals_behavior_"name".svg
-Similar to the previous plot, but shows only the signals during the behavior period.
-o	Clusters_behavior_"name"_Avg_dfof_VS_Avg_pdfof_"date_time".csv
-A CSV file containing cluster statistics from the permutation test comparing: 1) Avg_dfof: average observed cholinergic signal during the behavior 2) Avg_pdfof: average predicted signal based on the log of movement speed. The file includes the mass and size of the largest clusters detected under the null distribution.
-o	nullDis_Mass.svg
-A histogram of the null distribution of maximum cluster mass values, used to evaluate the statistical significance of the observed cluster mass.
-o	nullDis_size.svg
-A histogram of the null distribution of maximum cluster sizes, used to assess the significance of the observed cluster size.
-
-
+Outputs:
+•	behaviors_percentage_behavior_"name".svg
+A plot showing the proportion of total behaviors over time, computed as the ratio between the occurrence of the specified behavior at each time point and the sum of all behaviors at that time.
+•	main_behavior_"name".svg
+Time-aligned visualization of behavioral events across sessions, displaying:
+o	movement speed (black),
+o	observed cholinergic activity (ΔF/F, green),
+o	predicted cholinergic activity from log(speed) (red),
+spanning a window of 5 seconds before onset, during the behavior, and 5 seconds after offset.
+•	main_signals_behavior_"name".svg
+Same as above but restricted to the duration of the behavior (onset to offset), highlighting only the ΔF/F signals.
+•	Clusters_behavior_"name"Avg_dfof_VS_Avg_pdfof"date_time".csv
+A CSV file containing cluster-based permutation test results comparing:
+o	Avg_dfof: mean observed ΔF/F during the behavior
+o	Avg_pdfof: mean predicted ΔF/F based on speed
+Includes the mass and size of the largest clusters found under the null distribution.
+•	nullDis_Mass.svg
+Histogram of the null distribution of maximum cluster mass values, used to assess statistical significance of observed effects.
+•	nullDis_size.svg
+Histogram of the null distribution of maximum cluster sizes, supporting evaluation of observed cluster size significance.
 •	The stat_cluster_test function evaluates the statistical significance of observed cluster mass and cluster size by comparing them to null distributions obtained from a permutation test. It takes as input the observed cluster mass and size values, a path to save output plots, and a CSV file containing the null distribution of cluster statistics from shuffled data. The function first loads the null distribution of the largest cluster mass (largestMass_cluster_obs), computes its absolute values, and plots a histogram saved as nullDis_Mass.svg. It then calculates a Monte Carlo p-value by determining the proportion of null mass values greater than or equal to the observed value. The same procedure is repeated for the largest cluster size (largestSize_cluster_obs), producing a second histogram (nullDis_size.svg) and p-value. These outputs help determine whether the observed effects are statistically significant compared to chance.
 •	The function strech_time_Behaviors_only_4_increaseTime is designed to quantify the temporal dynamics of cholinergic activity (ΔF/F) in relation to the onset or offset of specific behaviors (e.g., grooming, walking) across multiple sessions. The proceeeing it similar to function strech_time_Behaviors_only_4_statistics beside that this new function then calculates the rise or decay timing by applying a threshold—defined as the baseline plus 98% of the activity change—and finds when the signal crosses this threshold. For each bout, the median of those crossing time points is used as an estimate of response timing. These estimates are aggregated and saved for both the observed and predicted signals. 
+
 Inputs:
 o	name_behavior (str)
 Behavior to analyze: "behavior_walking", "behavior_grooming", "behavior_rearings", "behavior_exp_statobj", or "behavior_exp_non_statobj".
@@ -64,6 +69,9 @@ o	activityThreshold (float)
 Threshold multiplier (e.g., 0.98) for detecting meaningful signal changes.
 o	considered_seconds (int)
 Time window (in seconds) before or after onset/offset to search for threshold crossings.
+
+
+Outputs: 
 o	CSV file
 time_<activityThreshold><name_behavior><StartOrEnd><considered_seconds>.csv
 o	Columns: dfof (observed), pdfof (predicted) response times.

@@ -1186,7 +1186,7 @@ def look_final_behavior(all_main, all_sts, all_eds):
     merged = np.concatenate((all_sts_sum, all_main_sum, all_eds_sum))
 
     return merged
-def strech_time_Behaviors_only_4_statistics(path, directory_path, name_behavior, whichTask, mouseid, num_iters_clusterTest):
+def strech_time_Behaviors_only_4_statistics(path, directory_path, name_behavior, whichTask, mouseid, trialid, num_iters_clusterTest):
     sr_analysis = 30
     folder_names = [folder for folder in os.listdir(directory_path) if
                     os.path.isdir(os.path.join(directory_path,
@@ -1274,6 +1274,10 @@ def strech_time_Behaviors_only_4_statistics(path, directory_path, name_behavior,
 
         if mouseid==0:
             mouse_ID=0
+
+        if trialid==0:
+            n_trial=0
+
         ############################## calulations
         if whichTask == "both":
             task_list = [0, 1]
@@ -1283,7 +1287,7 @@ def strech_time_Behaviors_only_4_statistics(path, directory_path, name_behavior,
             task_list = [1]
         else:
             print("Error Task type")
-        if (task_type in task_list) and (mouse_ID == mouseid):
+        if (task_type in task_list) and (mouse_ID == mouseid) and (n_trial == trialid):
             analysis_win = analysis_win - onset
             data = pd.read_csv(file_data).values
             data = pd.DataFrame(data)
@@ -2667,7 +2671,7 @@ if __name__ == '__main__':
     # bar_plot_timewashedLLM(path)
 
     # name_behavior= behavior_walking,behavior_grooming,behavior_rearings,behavior_exp_statobj,behavior_exp_non_statobj
-    # csv_file = strech_time_Behaviors_only_4_statistics(path, directory_path, "behavior_walking", "both", 0, 3)
+    # csv_file = strech_time_Behaviors_only_4_statistics(path, directory_path, "behavior_walking", "both", 0, 0, 3)
     # stat_cluster_test(2297.2, 567, path , csv_file)
 
     # StartOrEnd = 1 # 1 onset and 0 offset
